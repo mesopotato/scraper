@@ -19,8 +19,9 @@ The `setup.sh` script is a shell script that automates the setup of a Python vir
 ` chmod +x setup.sh `
 
 4. Execute the script:
-
-./setup.sh
+activate wsl ( type `wls` in powershell )
+run 
+` source setup.sh  `
 
 5. The script will install `virtualenv` if it's not already installed, create a virtual environment named `env`, activate it, and then install the dependencies listed in `requirements.txt`.
 

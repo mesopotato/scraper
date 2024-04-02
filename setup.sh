@@ -3,8 +3,8 @@
 # Check if virtual environment directory exists
 if [ ! -d "env" ]; then
     echo "Creating virtual environment..."
-    pip install virtualenv
-    virtualenv env
+    sudo apt install python3.8-venv
+    python3 -m venv env
 fi
 
 echo "Activating virtual environment..."
@@ -14,4 +14,3 @@ echo "Installing dependencies from requirements.txt..."
 pip install -r requirements.txt
 
 echo "Done!"
-``
