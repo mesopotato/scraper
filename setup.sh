@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Check if virtual environment directory exists
 if [ ! -d "env" ]; then
     echo "Creating virtual environment..."

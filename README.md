@@ -15,6 +15,7 @@ The `setup.sh` script is a shell script that automates the setup of a Python vir
 
 1. Open your terminal.
 2. Navigate to the project's directory where the `setup.sh` file is located.
+run `dos2unix setup.sh` after downloading the script from gitHub
 3. Run the following command to make the script executable:
 ` chmod +x setup.sh `
 
