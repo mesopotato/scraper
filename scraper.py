@@ -23,13 +23,6 @@ def fetch_and_parse_json(url):
     
     return extracted_data
 
-
-def download_pdf(url):
-    """Downloads a PDF and returns its content."""
-    response = requests.get(url)
-    return response.content
-
-
 def scrape_and_store(host_url, target_url):
     response = requests.get(host_url + target_url)
     soup = BeautifulSoup(response.content, 'html.parser')
@@ -48,26 +41,15 @@ def scrape_and_store(host_url, target_url):
             # Extract the file name here to ensure it's always filled
             file_name = link.split('/')[-1].rsplit('.', 1)[0]
             #print(f"File name: {file_name}")
-            data = {'file_name': file_name}  # Initialize the data dict with file_name
             
             if link.endswith('.json'):
+                data = {'file_name': file_name}  # Initialize the data dict with file_name
                 json_data = fetch_and_parse_json(full_link)
                 data.update(json_data)  # Update the data dict with JSON data
-                # No need for pdf_blob here since it's a JSON file
                 #print(f"Extracted JSON data for {full_link}: {json_data}")
-
                 db_manager.insert_or_update_row_with_data(data)
-            elif link.endswith('.pdf'):
-
-                pdf_blob = download_pdf(full_link)
-                print(f"Downloaded PDF for {full_link}")
-                
-                # Since it's a PDF, the relevant JSON data fields should be set to None or their defaults
-                # Only update the dict with PDF blob if it's a PDF file
-                #data['pdf_blob'] = pdf_blob
-                db_manager.insert_or_update_row_with_data(data, pdf_blob=pdf_blob)
                     
 if __name__ == "__main__":
     host_url = "https://entscheidsuche.ch"
-    target_url = "/docs/BE_Verwaltungsgericht/"
+    target_url = "/docs/BE_ZivilStraf/"
     scrape_and_store(host_url, target_url)
