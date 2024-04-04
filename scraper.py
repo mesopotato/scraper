@@ -51,5 +51,5 @@ def scrape_and_store(host_url, target_url):
                     
 if __name__ == "__main__":
     host_url = "https://entscheidsuche.ch"
-    target_url = "/docs/BE_ZivilStraf/"
+    target_url = "/docs/BE_Steuerrekurs/"
     scrape_and_store(host_url, target_url)

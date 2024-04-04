@@ -52,7 +52,7 @@ class TursoDBManager:
         except Exception as e:
             print(f"Error dropping table '{table_name}': {e}")
 
-    def get_all_rows(self):
+    def get_all_rows_e_bern_raw(self):
         """Retrieve all rows from the e_bern_raw table."""
         self.connect()
         cursor = self.conn.execute("SELECT * FROM e_bern_raw")
@@ -123,6 +123,39 @@ class TursoDBManager:
                 print(f"No changes detected for {new_data['file_name']}")
         self.conn.commit()
 
+    def create_table_e_bern_parsed(self):
+        """Create the table with updated attributes."""
+        self.connect()
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS e_bern_parsed (
+            ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            tsd TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            file_name TEXT UNIQUE, 
+            file_path TEXT, 
+            pdf_text TEXT
+            )
+        """)
+        self.conn.commit()
+        print("Table e_bern_parsed created or already exists.")
+
+    def insert_row_if_not_exists_e_bern_parsed(self, file_name, file_path, pdf_text):
+        """Insert a row into the e_bern_parsed table if it doesn't already exist."""
+        self.connect()
+        cursor = self.conn.execute("SELECT * FROM e_bern_parsed WHERE file_name = ?", (file_name,))
+        existing_row = cursor.fetchone()
+        if existing_row is None:
+            self.conn.execute("INSERT INTO e_bern_parsed (file_name, file_path, pdf_text) VALUES (?, ?, ?)", (file_name, file_path, pdf_text))
+            self.conn.commit()
+            print(f"Inserted new row for {file_name}")
+        else:
+            print(f"Row for {file_name} already exists")
+
+    def get_row_by_file_name_e_bern_parsed(self, file_name):
+        """Retrieve a row from the e_bern_parsed table by file name."""
+        self.connect()
+        cursor = self.conn.execute("SELECT * FROM e_bern_parsed WHERE file_name = ?", (file_name,))
+        row = cursor.fetchone()
+        return row        
 
 # Example usage
 if __name__ == "__main__":
@@ -130,6 +163,7 @@ if __name__ == "__main__":
     #db_manager.drop_table('e_bern_raw_new')
 
     #db_manager.create_table_e_bern_raw()
+    db_manager.create_table_e_bern_parsed()
 
     # Insert a row - replace 'your_url_here' and 'your_blob_data_here' with actual values
     # db_manager.insert_row('your_url_here', b'your_blob_data_here')
