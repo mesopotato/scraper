@@ -1,16 +1,16 @@
 import requests
 from bs4 import BeautifulSoup
-import json
-from turso import TursoDBManager
+import threading
+from db_bern import MySQLDBManager  # Adjust this import according to your project structure
+from pdf_parser import PDFScraperAndStorer  # Adjust this import as well
+import os
 
 def fetch_and_parse_json(url):
-    """Fetches a JSON file and extracts relevant data."""
     response = requests.get(url)
     data = response.json()
-    
     extracted_data = {
         'datum': data['Datum'],
-        'forderung': next((item['Text'] for item in data['Abstract'] if 'de' in item['Sprachen']), ''),
+        'forderung': next((item['Text'] for item in data.get('Abstract', []) if 'de' in item.get('Sprachen', [])), ''),
         'signatur': data.get('Signatur', ''),
         'source': data.get('Spider', ''),
         'file_path': data.get('PDF', {}).get('Datei', ''),
@@ -20,36 +20,73 @@ def fetch_and_parse_json(url):
         'scrapy_job': data.get('ScrapyJob', ''),
         'fetch_time_utc': data.get('Zeit UTC', '')
     }
-    
     return extracted_data
 
-def scrape_and_store(host_url, target_url):
-    response = requests.get(host_url + target_url)
-    soup = BeautifulSoup(response.content, 'html.parser')
+def scrape_and_store(host_url, target_url, thread_name):
+    try:
+        response = requests.get(host_url + target_url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+    
+        db_manager = MySQLDBManager()
+        pdf_processor = PDFScraperAndStorer()
+    
+        for tr in soup.select("#table-content tr")[1:]:
+            cells = tr.find_all("td")
+            if len(cells) < 3:
+                continue
+    
+            links = [a['href'] for a in cells[0].find_all('a', href=True)]
+            for link in links:
+                full_link = host_url + link
+                #print(f"{thread_name} processing {full_link}...")
+                file_name = link.split('/')[-1].rsplit('.', 1)[0]
+                
+                if link.endswith('.json'):
+                    data = {'file_name': file_name}
 
-    db_manager = TursoDBManager()
+                    #-------------------
+                    # Remove leading and trailing slashes and split
+                    parts = target_url.strip("/").split("/")
+                    # The last element is the directory name
+                    directory_name = parts[-1]
+                    nas_parsed_text_path = f"/mnt/z/entscheidsuche/{directory_name}/parsed/{file_name}.txt"
+                    if not os.path.exists(nas_parsed_text_path):
+                    #-------------------
+                        
+                        json_data = fetch_and_parse_json(full_link)
+                        data.update(json_data)
+                        db_manager.insert_or_update_row_with_data(data)
+                        pdf_processor.process_one_pdf_and_store(data['file_name'], data['file_path'])
 
-    for tr in soup.select("#table-content tr")[1:]:  # Skip the header row
-        cells = tr.find_all("td")
-        if len(cells) < 3:
-            continue  # Skip rows that don't have enough data
+                    #-------------------
+                    #else :
+                    #    print(f"{thread_name} already processed {full_link}.") 
+                    #-------------------
+                        
+    except Exception as e:
+        print(f"{thread_name} encountered an error: {e}. Restarting...")
+        threading.Thread(target=scrape_and_store, args=(host_url, target_url, thread_name)).start()
 
-        links = [a['href'] for a in cells[0].find_all('a', href=True)]
-        for link in links:
-            full_link = host_url + link
-            print(f"Processing {full_link}...")
-            # Extract the file name here to ensure it's always filled
-            file_name = link.split('/')[-1].rsplit('.', 1)[0]
-            #print(f"File name: {file_name}")
-            
-            if link.endswith('.json'):
-                data = {'file_name': file_name}  # Initialize the data dict with file_name
-                json_data = fetch_and_parse_json(full_link)
-                data.update(json_data)  # Update the data dict with JSON data
-                #print(f"Extracted JSON data for {full_link}: {json_data}")
-                db_manager.insert_or_update_row_with_data(data)
-                    
 if __name__ == "__main__":
     host_url = "https://entscheidsuche.ch"
-    target_url = "/docs/BE_Steuerrekurs/"
-    scrape_and_store(host_url, target_url)
+    target_urls = [
+        "/docs/BE_Anwaltsaufsicht/",
+        "/docs/BE_BVD/",
+        "/docs/BE_Steuerrekurs/",
+        "/docs/BE_Verwaltungsgericht/",
+        "/docs/BE_Weitere/",
+        "/docs/BE_ZivilStraf/"
+    ]
+
+    for index, target_url in enumerate(target_urls):
+        thread_name = f"Thread-{target_url}"
+        thread = threading.Thread(target=scrape_and_store, args=(host_url, target_url, thread_name), name=thread_name)
+        thread.start()
+
+    main_thread = threading.current_thread()
+    for t in threading.enumerate():
+        if t is main_thread:
+            continue
+        t.join()
+
+    print("Scraping and storage completed.")

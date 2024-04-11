@@ -18,6 +18,14 @@ class TursoDBManager:
             self.conn = libsql.connect(database=self.url, auth_token=self.auth_token)
             print(f"Connected to {self.url}")
 
+    def reconnect(self):
+        """Reconnect to the Turso database."""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
+            print("Connection closed")
+        self.connect()
+
     def create_table_e_bern_raw(self):
         """Create the table with updated attributes."""
         self.connect()
@@ -77,7 +85,6 @@ class TursoDBManager:
                 has_changes = True  # Set flag to True if there's a change
         
         return changes, has_changes
-
     
     def insert_or_update_row_with_data(self, new_data):
         self.connect()
@@ -103,10 +110,6 @@ class TursoDBManager:
 
             column_names = ["ID", "tsd", "file_name", "datum", "forderung", "signatur", "source", "file_path", "pdf_url", "checksum", "case_number", "scrapy_job", "fetch_time_utc"]
             current_data = dict(zip(column_names, existing_row))
-            
-            #print(f"colum names: {column_names}")
-            #print(f"current data: {current_data}")
-            #print(f"existing row: {existing_row}")
 
             changes, has_changes = self.dataChanged(current_data, new_data)
 
@@ -155,12 +158,19 @@ class TursoDBManager:
         self.connect()
         cursor = self.conn.execute("SELECT * FROM e_bern_parsed WHERE file_name = ?", (file_name,))
         row = cursor.fetchone()
-        return row        
+        return row  
+
+    def get_all_rows_e_bern_parsed(self):
+        """Retrieve all rows from the e_bern_raw table."""
+        self.connect()
+        cursor = self.conn.execute("SELECT * FROM e_bern_parsed")
+        rows = cursor.fetchall()
+        return rows      
 
 # Example usage
 if __name__ == "__main__":
     db_manager = TursoDBManager()
-    #db_manager.drop_table('e_bern_raw_new')
+    #db_manager.drop_table('e_bern_parsed')
 
     #db_manager.create_table_e_bern_raw()
     db_manager.create_table_e_bern_parsed()
