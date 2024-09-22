@@ -1,3 +1,7 @@
+# entcheidsuche.ch crawler
+https://entscheidsuche.ch/docs/ -> set an endpoint and download everythin 
+late you can parse all pdfs to text with the parser.py 
+
 # Project Setup Instructions
 
 This project includes a setup script for Unix-based systems (such as Linux and macOS) and a setup script for Windows. These scripts are designed to create a virtual Python environment and install all required dependencies from the `requirements.txt` file.
